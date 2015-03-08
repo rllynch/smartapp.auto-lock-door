@@ -2,8 +2,8 @@
  *  Auto Lock Door
  *
  *  Author: Chris Sader (@csader)
- *  Collaborators: @chrisb
- *  Date: 2013-08-21
+ *  Collaborators: @chrisb with modifications from Richard L. Lynch
+ *  Date: 2015-03-06
  *  URL: http://www.github.com/smartthings-users/smartapp.auto-lock-door
  *
  * Copyright (C) 2013 Chris Sader.
@@ -23,6 +23,16 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+definition(
+    name: "Auto Lock Door",
+    namespace: "rllynch",
+    author: "Chris Sader",
+    description: "Auto lock door after N minutes",
+    category: "Safety & Security",
+    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Solution/doors-locks-active.png",
+    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Solution/doors-locks-active@2x.png",
+    iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Solution/doors-locks-active@3x.png")
+
 preferences
 {
     section("When a door unlocks...") {
@@ -30,9 +40,6 @@ preferences
     }
     section("Lock it how many minutes later?") {
         input "minutesLater", "number", title: "When?"
-    }
-    section("Lock it only when this door is closed") {
-        input "openSensor", "capability.contactSensor", title: "Where?"
     }
 }
 
@@ -54,40 +61,17 @@ def initialize()
 {
     log.debug "Settings: ${settings}"
     subscribe(lock1, "lock", doorHandler)
-    subscribe(openSensor, "contact.closed", doorClosed)
-    subscribe(openSensor, "contact.open", doorOpen)
 }
 
 def lockDoor()
 {
-    log.debug "Locking Door if Closed"
-    if((openSensor.latestValue("contact") == "closed")){
-    	log.debug "Door Closed"
-    	lock1.lock()
-    } else {
-    	if ((openSensor.latestValue("contact") == "open")) {
-        def delay = minutesLater * 60
-        log.debug "Door open will try again in $minutesLater minutes"
-        runIn( delay, lockDoor )
-        }
-    }
-}
-
-def doorOpen(evt) {
-    log.debug "Door open reset previous lock task..."
-    unschedule( lockDoor )
-    def delay = minutesLater * 60
-    runIn( delay, lockDoor )
-}
-
-def doorClosed(evt) {
-    log.debug "Door Closed"
+    log.debug "Locking ${lock1} now"
+    lock1.lock()
 }
 
 def doorHandler(evt)
 {
-    log.debug "Door ${openSensor.latestValue}"
-    log.debug "Lock ${evt.name} is ${evt.value}."
+    log.debug "${lock1} is ${evt.value}."
 
     if (evt.value == "locked") {                  // If the human locks the door then...
         log.debug "Cancelling previous lock task..."
@@ -95,7 +79,7 @@ def doorHandler(evt)
     }
     else {                                      // If the door is unlocked then...
         def delay = minutesLater * 60          // runIn uses seconds
-        log.debug "Re-arming lock in ${minutesLater} minutes (${delay}s)."
+        log.debug "Locking ${lock1} in ${minutesLater} minutes (${delay}s)."
         runIn( delay, lockDoor )                // ...schedule to lock in x minutes.
     }
 }
