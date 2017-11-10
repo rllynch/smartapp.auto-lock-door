@@ -61,6 +61,10 @@ def initialize()
 {
     log.debug "Settings: ${settings}"
     subscribe(lock1, "lock", doorHandler)
+
+    def delay = minutesLater * 60          // runIn uses seconds
+    log.debug "Locking ${lock1} in ${minutesLater} minutes (${delay}s)."
+    runIn( delay, lockDoor )                // ...schedule to lock in x minutes.
 }
 
 def lockDoor()
